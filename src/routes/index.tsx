@@ -28,6 +28,12 @@ import {
   ChevronDown,
   BarChart3,
 } from "lucide-react";
+import {
+  useLanguage,
+  DISTRICT_NAMES_KN,
+  CRIME_TYPE_NAMES_KN,
+} from "@/context/language-context";
+
 import { CrimeFrequencyDashboard } from "@/components/crime-frequency-dashboard";
 import {
   ResponsiveContainer,
@@ -252,6 +258,7 @@ function Index() {
   const { data: firs = [] } = useFirs(filters);
   const { data: suspects = [] } = useSuspects(district);
   const { connected, lastEventAt } = useKspRealtime();
+  const { lang, t } = useLanguage();
 
   const kpi = useMemo(() => computeKpi(firs, suspects), [firs, suspects]);
   const trend14 = useMemo(() => computeTrend(firs), [firs]);
@@ -272,7 +279,9 @@ function Index() {
       />
       <Ticker />
       <div className="flex border-b border-slate-200 bg-white px-4 py-1.5 text-[11px] text-slate-600 md:px-6">
-        <span>{firs.length} FIRs in current filter window</span>
+        <span>
+          {firs.length} {t.firsInWindow}
+        </span>
       </div>
       <div className="flex">
         <Sidebar view={view} setView={setView} />
@@ -296,8 +305,8 @@ function Index() {
             <>
               <SectionHeader
                 eyebrow="Module 03"
-                title="Criminological Network & Link Analysis"
-                subtitle="Live association graph across FIRs, MOs, vehicles and jurisdictions"
+                title={lang === "kn" ? "ಅಪರಾಧ ಜಾಲ ಮತ್ತು ಲಿಂಕ್ ವಿಶ್ಲೇಷಣೆ" : "Criminological Network & Link Analysis"}
+                subtitle={t.module03Subtitle}
               />
               <NetworkAnalysisView
                 district={district}
@@ -313,6 +322,38 @@ function Index() {
           )}
         </main>
       </div>
+    </div>
+  );
+}
+
+/* ============================== LANGUAGE TOGGLE ============================== */
+
+function LanguageToggle() {
+  const { lang, setLang } = useLanguage();
+  return (
+    <div className="flex items-center gap-1 bg-slate-100 border border-slate-200 rounded-lg p-1 shrink-0">
+      <button
+        type="button"
+        onClick={() => setLang("en")}
+        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+          lang === "en"
+            ? "bg-white text-slate-900 shadow-xs border border-slate-200 font-bold"
+            : "text-slate-500 hover:text-slate-800"
+        }`}
+      >
+        <span>🇬🇧</span> English
+      </button>
+      <button
+        type="button"
+        onClick={() => setLang("kn")}
+        className={`px-2.5 py-1 text-xs font-semibold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+          lang === "kn"
+            ? "bg-amber-700 text-white font-bold shadow-xs"
+            : "text-slate-500 hover:text-slate-800"
+        }`}
+      >
+        <span>🇮🇳</span> ಕನ್ನಡ
+      </button>
     </div>
   );
 }
@@ -334,35 +375,41 @@ function TopBar({
   dateRange: string;
   setDateRange: (v: string) => void;
 }) {
+  const { t, translateDistrict, translateCrimeType } = useLanguage();
+
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="flex items-center gap-4 px-4 md:px-6 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 px-4 md:px-6 py-3">
         <div className="flex items-center gap-3">
           <div className="grid h-10 w-10 place-items-center rounded-md bg-gradient-to-br from-amber-600 to-amber-800 shadow-sm">
             <Shield className="h-5 w-5 text-white" />
           </div>
           <div className="leading-tight">
             <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 font-semibold">
-              Karnataka State Police · SCRB
+              {t.deptName}
             </div>
             <h1 className="text-base md:text-lg font-bold text-slate-900">
-              KSP-INTELLINET <span className="text-amber-700">·</span> Command Center
+              {t.appTitle} <span className="text-amber-700">·</span> {t.commandCenter}
             </h1>
           </div>
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <LanguageToggle />
+
           <FilterSelect
             icon={<MapPin className="h-3.5 w-3.5" />}
             value={district}
             onChange={setDistrict}
             options={[...DISTRICTS]}
+            formatter={translateDistrict}
           />
           <FilterSelect
             icon={<Filter className="h-3.5 w-3.5" />}
             value={crimeType}
             onChange={setCrimeType}
             options={["All Types", ...CRIME_TYPES]}
+            formatter={translateCrimeType}
           />
           <FilterSelect
             icon={<Calendar className="h-3.5 w-3.5" />}
@@ -370,7 +417,10 @@ function TopBar({
             onChange={setDateRange}
             options={["Last 24 hours", "Last 7 days", "Last 30 days", "Last 90 days"]}
           />
-          <button className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-slate-50 hover:border-rose-300 hover:bg-rose-50 transition-colors">
+          <button
+            title="Alerts"
+            className="grid h-9 w-9 place-items-center rounded-md border border-slate-200 bg-slate-50 hover:border-rose-300 hover:bg-rose-50 transition-colors"
+          >
             <Bell className="h-4 w-4 text-rose-600" />
           </button>
         </div>
@@ -384,11 +434,13 @@ function FilterSelect({
   value,
   onChange,
   options,
+  formatter,
 }: {
   icon: React.ReactNode;
   value: string;
   onChange: (v: string) => void;
   options: string[];
+  formatter?: (v: string) => string;
 }) {
   return (
     <label className="group relative flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 pl-2.5 pr-1 py-1.5 hover:border-blue-400 transition-colors cursor-pointer">
@@ -400,7 +452,7 @@ function FilterSelect({
       >
         {options.map((o) => (
           <option key={o} value={o} className="bg-white text-slate-900">
-            {o}
+            {formatter ? formatter(o) : o}
           </option>
         ))}
       </select>
@@ -429,14 +481,29 @@ function Ticker() {
   );
 }
 
-/* ============================== SIDEBAR ============================== */
+/* ============================== SIDEBAR & MODULES ============================== */
+
+function useModules() {
+  const { t } = useLanguage();
+  return [
+    { key: "overview" as ViewKey, label: t.overview, icon: <Activity className="h-4 w-4" />, num: 1 },
+    { key: "crime-frequency" as ViewKey, label: t.crimeFrequency, icon: <BarChart3 className="h-4 w-4" />, num: 2 },
+    { key: "geo" as ViewKey, label: t.geoHeatmap, icon: <MapPin className="h-4 w-4" />, num: 3 },
+    { key: "network" as ViewKey, label: t.networkAnalysis, icon: <Network className="h-4 w-4" />, num: 4 },
+    { key: "predictive" as ViewKey, label: t.predictiveAnalytics, icon: <Brain className="h-4 w-4" />, num: 5 },
+    { key: "copilot" as ViewKey, label: t.aiCopilot, icon: <Sparkles className="h-4 w-4" />, num: 6 },
+    { key: "records" as ViewKey, label: t.firRegistry, icon: <FileText className="h-4 w-4" />, num: 7 },
+  ];
+}
 
 function Sidebar({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) {
-  const items = MODULES;
+  const { lang, t } = useLanguage();
+  const items = useModules();
+
   return (
     <aside className="sticky top-[97px] hidden md:flex h-[calc(100vh-97px)] w-64 shrink-0 flex-col border-r border-slate-200 bg-white p-3">
       <div className="mb-2 px-2 pt-1 text-[10px] font-bold uppercase tracking-widest text-slate-400">
-        Command Modules
+        {lang === "kn" ? "ಕಮಾಂಡ್ ಮಾಡ್ಯೂಲ್‌ಗಳು" : "Command Modules"}
       </div>
       <nav className="space-y-1">
         {items.map((it) => {
@@ -471,18 +538,21 @@ function Sidebar({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => vo
       <div className="mt-auto rounded-md border border-slate-200 bg-slate-50 p-3">
         <div className="flex items-center gap-2 text-xs text-slate-700 font-semibold">
           <Users className="h-3.5 w-3.5 text-blue-600" />
-          <span>Session: SCRB Cmdr.</span>
+          <span>{lang === "kn" ? "ಅಧಿವೇಶನ: ಎಸ್‌ಸಿಆರ್‌ಬಿ ಕಮಾಂಡರ್" : "Session: SCRB Cmdr."}</span>
         </div>
-        <div className="mt-1 text-[11px] text-slate-500">Clearance: TIER-1 · Bengaluru HQ</div>
+        <div className="mt-1 text-[11px] text-slate-500">
+          {lang === "kn" ? "ಮಟ್ಟ-1 · ಬೆಂಗಳೂರು ಪ್ರಧಾನ ಕಛೇರಿ" : "Clearance: TIER-1 · Bengaluru HQ"}
+        </div>
       </div>
     </aside>
   );
 }
 
 function MobileModuleNav({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => void }) {
+  const modules = useModules();
   return (
     <nav className="md:hidden -mx-1 flex gap-2 overflow-x-auto pb-1">
-      {MODULES.map((it) => {
+      {modules.map((it) => {
         const active = view === it.key;
         return (
           <button
@@ -503,36 +573,6 @@ function MobileModuleNav({ view, setView }: { view: ViewKey; setView: (v: ViewKe
   );
 }
 
-const MODULES: { key: ViewKey; label: string; icon: React.ReactNode; num: number }[] = [
-  { key: "overview", label: "Executive Command", icon: <Activity className="h-4 w-4" />, num: 1 },
-  {
-    key: "crime-frequency",
-    label: "Crime Frequency Analytics",
-    icon: <BarChart3 className="h-4 w-4" />,
-    num: 2,
-  },
-  { key: "geo", label: "Geospatial Hotspots", icon: <MapPin className="h-4 w-4" />, num: 3 },
-  {
-    key: "network",
-    label: "Network & Link Analysis",
-    icon: <Network className="h-4 w-4" />,
-    num: 4,
-  },
-  { key: "predictive", label: "Predictive Analytics", icon: <Brain className="h-4 w-4" />, num: 5 },
-  {
-    key: "copilot",
-    label: "KSP-Copilot & Anomalies",
-    icon: <Sparkles className="h-4 w-4" />,
-    num: 6,
-  },
-  {
-    key: "records",
-    label: "FIR / Incident Registry",
-    icon: <FileText className="h-4 w-4" />,
-    num: 7,
-  },
-];
-
 /* ============================== OVERVIEW VIEW ============================== */
 
 function OverviewView({
@@ -550,20 +590,23 @@ function OverviewView({
   alerts: { station: string; district: string; type: string; delta: number; count: number }[];
   onNavigate?: (v: ViewKey) => void;
 }) {
+  const { lang, t } = useLanguage();
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-amber-50 via-white to-blue-50 border border-slate-200 p-4 rounded-xl shadow-xs">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-800 uppercase tracking-wider">
             <BarChart3 className="h-4 w-4 text-amber-700" />
-            <span>Interactive Recharts Dashboard</span>
+            <span>{lang === "kn" ? "ಸಂವಾದಾತ್ಮಕ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್" : "Interactive Recharts Dashboard"}</span>
           </div>
           <h2 className="text-lg font-bold text-slate-900 mt-0.5">
-            Crime Type Frequency & Typology Analytics
+            {lang === "kn" ? "ಅಪರಾಧ ಪ್ರಕಾರಗಳ ಆವರ್ತನ ಮತ್ತು ವರ್ಗೀಕರಣ ವಿಶ್ಲೇಷಣೆ" : "Crime Type Frequency & Typology Analytics"}
           </h2>
           <p className="text-xs text-slate-600 mt-0.5">
-            Visualize FIR reporting frequency, property loss metrics, temporal trend lines, and
-            multi-dimensional radar profiles using Recharts.
+            {lang === "kn"
+              ? "ಎಫ್‌ಐಆರ್ ವರದಿ ದರಗಳು, ಆಸ್ತಿ ನಷ್ಟ ಮತ್ತು ಸಮಯ ಆಧಾರಿತ ಪ್ರವೃತ್ತಿಗಳನ್ನು ವೀಕ್ಷಿಸಿ."
+              : "Visualize FIR reporting frequency, property loss metrics, temporal trend lines, and multi-dimensional radar profiles."}
           </p>
         </div>
         {onNavigate && (
@@ -571,7 +614,7 @@ function OverviewView({
             onClick={() => onNavigate("crime-frequency")}
             className="shrink-0 flex items-center gap-2 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs px-4 py-2.5 rounded-lg shadow-xs transition-all active:scale-95 cursor-pointer"
           >
-            <span>Open Frequency Dashboard</span>
+            <span>{lang === "kn" ? "ಆವರ್ತನ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್ ತೆರೆಯಿರಿ" : "Open Frequency Dashboard"}</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         )}
@@ -579,47 +622,47 @@ function OverviewView({
 
       <SectionHeader
         eyebrow="Module 01"
-        title="Executive Command Overview"
-        subtitle="Statewide operational picture for SCRB leadership"
+        title={lang === "kn" ? "ಕಾರ್ಯನಿರ್ವಾಹಕ ಕಮಾಂಡ್ ಅವಲೋಕನ" : "Executive Command Overview"}
+        subtitle={t.module01Subtitle}
       />
 
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3">
         <KpiCard
-          label="Total FIRs"
+          label={lang === "kn" ? "ಒಟ್ಟು ಎಫ್‌ಐಆರ್‌ಗಳು" : "Total FIRs"}
           value={kpi.totalFIRs.toLocaleString("en-IN")}
           delta="+3.2%"
           positive
           icon={<FileText className="h-4 w-4" />}
         />
         <KpiCard
-          label="Cases Resolved"
+          label={lang === "kn" ? "ವಿಲೇವಾರಿಯಾದ ಪ್ರಕರಣಗಳು" : "Cases Resolved"}
           value={kpi.resolved.toLocaleString("en-IN")}
           delta="+1.8%"
           positive
           icon={<Shield className="h-4 w-4" />}
         />
         <KpiCard
-          label="Open Investigations"
+          label={lang === "kn" ? "ತನಿಖೆಯಲ್ಲಿರುವ ಪ್ರಕರಣಗಳು" : "Open Investigations"}
           value={kpi.openCases.toLocaleString("en-IN")}
           delta="-0.6%"
           positive
           icon={<Eye className="h-4 w-4" />}
         />
         <KpiCard
-          label="Repeat Offenders"
+          label={lang === "kn" ? "ಮರು ಅಪರಾಧಿಗಳು" : "Repeat Offenders"}
           value={kpi.repeatOffenders}
           delta="live"
           icon={<Users className="h-4 w-4" />}
         />
         <KpiCard
-          label="Avg Suspect Risk"
+          label={lang === "kn" ? "ಸರಾಸರಿ ಶಂಕಿತ ಅಪಾಯ" : "Avg Suspect Risk"}
           value={`${kpi.riskIndex}/100`}
           delta="live"
           icon={<Target className="h-4 w-4" />}
           tone="warn"
         />
         <KpiCard
-          label="Property Loss"
+          label={t.totalPropertyLoss}
           value={inr(kpi.propertyLoss)}
           delta={`${kpi.detectionRate}% linked`}
           icon={<Clock className="h-4 w-4" />}
