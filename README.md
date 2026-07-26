@@ -1,6 +1,6 @@
 # KSP-INTELLINET — Command Center Dashboard
 
-https://ksp-intellinet.vercel.app/
+https://ksp-intellinet-web-app.vercel.app/
 
 > Integrated Crime Intelligence & Decision-Support Platform for Karnataka State Police (SCRB)
 
