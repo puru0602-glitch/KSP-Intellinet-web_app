@@ -1,0 +1,6 @@
+{
+  "name": "KSP IntelliNet",
+  "description": "Karnataka State Police Intelligence Network & FIR Dossier Management System",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
